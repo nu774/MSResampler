@@ -1,6 +1,7 @@
 #include "wavsource.h"
 #include "wavsink.h"
 #include "MSResampler.h"
+#include "Quantizer.h"
 #include "wgetopt.h"
 
 static
@@ -99,7 +100,7 @@ public:
 static
 void process(const std::shared_ptr<FILE> &ifp,
 	     const std::shared_ptr<FILE> &ofp, int rate, int quality,
-	     double bandwidth)
+	     double bandwidth, int bits)
 {
     std::shared_ptr<WaveSource> source(std::make_shared<WaveSource>(ifp));
 
@@ -110,25 +111,27 @@ void process(const std::shared_ptr<FILE> &ifp,
 	    chanmask |= (1 << (channels->at(i) - 1));
     }
 
-    std::shared_ptr<MSResampler> resampler =
+    std::shared_ptr<ISource> filter =
 	std::make_shared<MSResampler>(source, rate, quality, bandwidth);
+    if (bits != 32)
+	filter = std::make_shared<Quantizer>(filter, bits, false, bits == 32);
 
     std::shared_ptr<WaveSink> sink =
-	std::make_shared<WaveSink>(ofp.get(), resampler->length(),
-				   resampler->getSampleFormat(),
+	std::make_shared<WaveSink>(ofp.get(), filter->length(),
+				   filter->getSampleFormat(),
 				   chanmask);
 
     const size_t pull_packets = 4096;
-    AudioStreamBasicDescription asbd = resampler->getSampleFormat();
+    AudioStreamBasicDescription asbd = filter->getSampleFormat();
     std::vector<uint8_t> buffer(pull_packets * asbd.mBytesPerFrame);
 
     size_t ns;
-    Progress progress(resampler->length(), asbd.mSampleRate);
-    while ((ns = resampler->readSamples(&buffer[0], pull_packets)) > 0) {
+    Progress progress(filter->length(), asbd.mSampleRate);
+    while ((ns = filter->readSamples(&buffer[0], pull_packets)) > 0) {
 	sink->writeSamples(&buffer[0], ns * asbd.mBytesPerFrame, ns);
-	progress.update(resampler->getPosition());
+	progress.update(filter->getPosition());
     }
-    progress.finish(resampler->getPosition());
+    progress.finish(filter->getPosition());
 }
 
 struct COMInitializer {
@@ -151,8 +154,9 @@ L"\"-\" as INFILE means stdin\n"
 L"\"-\" as OUTFILE means stdout\n"
 L"[Options]\n"
 L"-r <n>     sample rate in Hz (required)\n"
-L"-q <n>     quality, 1-60, default 60\n"
-L"-b <float> lowpass bandwidth, 0.0-1.0, default 0.95\n"
+L"-q <n>     quality: 1-60 (default 60)\n"
+L"-w <float> lowpass bandwidth: 0.0-1.0 (default 0.95)\n"
+L"-b <n>     output bitdepth: 2-32 (default 32)\n"
     , stderr);
     std::exit(1);
 }
@@ -164,9 +168,9 @@ int wmain(int argc, wchar_t **argv)
     std::setbuf(stderr, 0);
 
     int ch;
-    int rate = 0, quality = 60;
+    int rate = 0, quality = 60, bits = 32;
     double bandwidth = 0.95;
-    while ((ch = getopt::getopt(argc, argv, L"r:q:b:")) != -1) {
+    while ((ch = getopt::getopt(argc, argv, L"r:q:w:b:")) != -1) {
 	switch (ch) {
 	case 'r':
 	    if (std::swscanf(getopt::optarg, L"%d", &rate) != 1 || rate <= 0)
@@ -178,10 +182,16 @@ int wmain(int argc, wchar_t **argv)
 	    if (quality < 1 || quality > 60)
 		usage();
 	    break;
-	case 'b':
+	case 'w':
 	    if (std::swscanf(getopt::optarg, L"%lf", &bandwidth) != 1)
 		usage();
 	    if (bandwidth < 0.0 || bandwidth > 1.0)
+		usage();
+	    break;
+	case 'b':
+	    if (std::swscanf(getopt::optarg, L"%d", &bits) != 1)
+		usage();
+	    if (bits < 2 || bits > 32)
 		usage();
 	    break;
 	default:
@@ -196,7 +206,7 @@ int wmain(int argc, wchar_t **argv)
 	std::shared_ptr<FILE> ifp = win32::fopen(argv[0], L"rb");
 	std::shared_ptr<FILE> ofp = win32::fopen(argv[1], L"wb");
 	COMInitializer __com__;
-	process(ifp, ofp, rate, quality, bandwidth);
+	process(ifp, ofp, rate, quality, bandwidth, bits);
 	return 0;
     } catch (const std::exception &e) {
 	std::fwprintf(stderr, L"ERROR: %s\n", strutil::us2w(e.what()));

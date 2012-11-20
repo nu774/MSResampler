@@ -45,6 +45,12 @@
     <ClCompile Include="win32util.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Quantizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="iointer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cautil.h">
@@ -78,6 +84,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="win32util.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Quantizer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
