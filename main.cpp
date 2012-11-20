@@ -111,8 +111,10 @@ void process(const std::shared_ptr<FILE> &ifp,
 	    chanmask |= (1 << (channels->at(i) - 1));
     }
 
-    std::shared_ptr<ISource> filter =
+    std::shared_ptr<IDMODSPEngine> engine =
 	std::make_shared<MSResampler>(source, rate, quality, bandwidth);
+    std::shared_ptr<ISource> filter =
+	std::make_shared<DMODSPProcessor>(source, engine);
     if (bits != 32)
 	filter = std::make_shared<Quantizer>(filter, bits, false, bits == 32);
 
