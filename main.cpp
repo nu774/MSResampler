@@ -128,12 +128,12 @@ void process(const std::shared_ptr<FILE> &ifp,
     std::vector<uint8_t> buffer(pull_packets * asbd.mBytesPerFrame);
 
     size_t ns;
-    Progress progress(filter->length(), asbd.mSampleRate);
+    Progress progress(source->length(), source->getSampleFormat().mSampleRate);
     while ((ns = filter->readSamples(&buffer[0], pull_packets)) > 0) {
         sink->writeSamples(&buffer[0], ns * asbd.mBytesPerFrame, ns);
-        progress.update(filter->getPosition());
+        progress.update(source->getPosition());
     }
-    progress.finish(filter->getPosition());
+    progress.finish(source->getPosition());
 }
 
 struct COMInitializer {
