@@ -21,11 +21,11 @@ class DMODSPProcessor: public FilterBase {
     std::shared_ptr<IDMODSPEngine> m_engine;
 public:
     DMODSPProcessor(const std::shared_ptr<ISource> &src, 
-		    const std::shared_ptr<IDMODSPEngine> &engine);
+                    const std::shared_ptr<IDMODSPEngine> &engine);
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_engine->getSampleFormat();
+        return m_engine->getSampleFormat();
     }
     int64_t getPosition() { return m_position; }
     size_t readSamples(void *buffer, size_t nsamples);
@@ -36,10 +36,10 @@ class MSResampler: public IDMODSPEngine {
     AudioStreamBasicDescription m_asbd;
 public:
     MSResampler(const std::shared_ptr<ISource> &src, int rate,
-		int quality=60, double bandwidth=0.95);
+                int quality=60, double bandwidth=0.95);
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_asbd;
+        return m_asbd;
     }
     IMediaObjectPtr &mediaObject() { return m_mediaObject; };
 };
